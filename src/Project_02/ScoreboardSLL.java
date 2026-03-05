@@ -23,106 +23,171 @@
 //package dsaj.arrays;
 package Project_02;
 
-/** Class for storing high scores in an array in nondecreasing order. */
+/**
+ * Class for storing high scores in a singly linked list in nondecreasing order.
+ * Maintains the top scores for a game application using the SinglyLinkedList from the textbook.
+ */
 public class ScoreboardSLL {
-  private int numEntries = 0;              // number of actual entries
-  private int maxEntries = 10;
+  private int maxEntries;                                  // maximum capacity for storing entries
   private SinglyLinkedList<GameEntry> board;               // linked list of game entries (names & scores)
-  /** Constructs an empty scoreboard with the given capacity for storing entries. */
+
+  /**
+   * Constructs an empty scoreboard with the given capacity for storing entries.
+   * @param capacity the maximum number of entries to store
+   */
   public ScoreboardSLL(int capacity) {
     board = new SinglyLinkedList<>();
     maxEntries = capacity;
   }
 
-  /** Attempt to add a new score to the collection (if it is high enough) */
+
+  /**
+   * Attempt to add a new score to the collection (if it is high enough).
+   * Entries are maintained in sorted order from highest to lowest score.
+   * @param e the GameEntry to add
+   */
   public void add(GameEntry e) {
     int newScore = e.getScore();
-    SinglyLinkedList<GameEntry> tempList = new SinglyLinkedList<>();
-    // is the new entry e really a high score?
-    if (numEntries < maxEntries || newScore > board.last().getScore()) {
-      if (numEntries < maxEntries)        // no score drops from the board
-      {
-        numEntries++;
-        if (board.isEmpty())
-        	board.addFirst(e);
-        //list is not maxed
-        else if(board.first().getScore() < newScore)
-            //add first
-            board.addFirst(e);
-        else if (board.last().getScore() > newScore)
-            //add last
-            board.addLast(e);
-        else
-        {
-            //add in between
-            while ( newScore < board.first().getScore())
-            {
-                tempList.addLast(board.removeFirst());
-            }
-            tempList.addLast(e);
-            tempList.concatenate(board);
-            board = tempList;
+
+    // Check if the new entry should be added
+    // Add if: list is not full OR new score is higher than the lowest score
+    if (board.size() < maxEntries || newScore > board.last().getScore()) {
+
+      // Handle empty list
+      if (board.isEmpty()) {
+        board.addFirst(e);
+        return;
+      }
+
+      // Handle adding at the front (highest score)
+      if (newScore > board.first().getScore()) {
+        board.addFirst(e);
+        // Remove last element if we exceeded capacity
+        if (board.size() > maxEntries) {
+          removeLast();
+        }
+        return;
+      }
+
+      // Handle adding at the end (lowest score, but list not full)
+      if (board.size() < maxEntries && newScore <= board.last().getScore()) {
+        board.addLast(e);
+        return;
+      }
+
+      // Add in the middle: need to find the correct position
+      SinglyLinkedList<GameEntry> tempList = new SinglyLinkedList<>();
+      boolean inserted = false;
+
+      // Move entries from board to tempList, inserting e at the correct position
+      while (!board.isEmpty()) {
+        GameEntry current = board.first();
+
+        // If we haven't inserted yet and current score is less than new score
+        if (!inserted && current.getScore() < newScore) {
+          tempList.addLast(e);
+          inserted = true;
+        }
+
+        // Move current entry to tempList (unless we're at capacity)
+        if (tempList.size() < maxEntries) {
+          tempList.addLast(board.removeFirst());
+        } else {
+          board.removeFirst(); // discard remaining entries
         }
       }
-      else
-      {
-        // Add in between by moving to tempList all entries from board except the last one
-        // First move to tempList all the entries with a score higher than newScore using tempList.addLast() method
-        // Then, add the entry "e" to tempList using addLast() method
-        // Finally, add to tempList the rest of board entries except the last one
-        // To keep track when the last entries is reached, there needs to be a counter variable
-        // The counter variable is incremented with each addLast()
-        // To exclude the last entry from board the counter variable must be < maxEntries
 
-        // --------- type your code here ----------------
-
-      }
+      // Restore the list
+      board = tempList;
     }
   }
 
-  /** Remove and return the high score at index i. */
-  public GameEntry remove(int i) throws IndexOutOfBoundsException {
-    if (i < 0 || i >= numEntries)
-      throw new IndexOutOfBoundsException("Invalid index: " + i);
-  // -------- type your code here using SinglyLinkedList instead of array ------------
-
-  /*
-    GameEntry temp = board[i];                 // save the object to be removed
-    for (int j = i; j < numEntries - 1; j++)   // count up from i (not down)
-      board[j] = board[j+1];                   // move one cell to the left
-    board[numEntries -1 ] = null;              // null out the old last score
-    numEntries--;
+  /**
+   * Helper method to remove the last element from the list.
    */
+  private void removeLast() {
+    if (board.isEmpty()) return;
 
-    return temp;                               // return the removed object
+    if (board.size() == 1) {
+      board.removeFirst();
+      return;
+    }
+
+    // Rebuild list without the last element
+    SinglyLinkedList<GameEntry> tempList = new SinglyLinkedList<>();
+    int count = board.size() - 1;
+
+    for (int i = 0; i < count; i++) {
+      tempList.addLast(board.removeFirst());
+    }
+    board.removeFirst(); // discard last element
+    board = tempList;
   }
 
-  /** Returns a string representation of the high scores list. */
+
+  /**
+   * Remove and return the high score at index i.
+   * @param i the index of the entry to remove (0-based)
+   * @return the removed GameEntry
+   * @throws IndexOutOfBoundsException if the index is invalid
+   */
+  public GameEntry remove(int i) throws IndexOutOfBoundsException {
+    if (i < 0 || i >= board.size())
+      throw new IndexOutOfBoundsException("Invalid index: " + i);
+
+    // Special case: removing the first element
+    if (i == 0) {
+      return board.removeFirst();
+    }
+
+    // General case: traverse to find and remove the element at index i
+    SinglyLinkedList<GameEntry> tempList = new SinglyLinkedList<>();
+    GameEntry temp = null;
+
+    // Move i elements from board to tempList
+    for (int j = 0; j < i; j++) {
+      tempList.addLast(board.removeFirst());
+    }
+
+    // Remove and save the element at index i
+    temp = board.removeFirst();
+
+    // Move remaining elements from board to tempList
+    while (!board.isEmpty()) {
+      tempList.addLast(board.removeFirst());
+    }
+
+    // Restore the list
+    board = tempList;
+
+    return temp;
+  }
+
+
+  /**
+   * Returns a string representation of the high scores list.
+   * @return a string showing all entries in the scoreboard
+   */
   public String toString() {
-    StringBuilder sb = new StringBuilder("[");
-    /*for (int j = 0; j < numEntries; j++) {
-      if (j > 0)
-        sb.append(", ");                   // separate entries by commas
-      sb.append(board[j]);
-    }*/
-    sb.append(board.toString());
-    sb.append("]");
-    return sb.toString();
+    return board.toString();
   }
 
+  /**
+   * Main method to test the ScoreboardSLL class.
+   */
   public static void main(String[] args) {
     // The main method
-    Scoreboard_1 highscores = new Scoreboard_1(5);
+    ScoreboardSLL highscores = new ScoreboardSLL(10);
     String[] names = {"Rob", "Mike", "Rose", "Jill", "Jack", "Anna", "Paul", "Bob"};
     int[] scores = {750, 1105, 590, 740, 510, 660, 720, 400};
 
-    for (int i=0; i < names.length; i++) {
+    for (int i = 0; i < names.length; i++) {
       GameEntry gE = new GameEntry(names[i], scores[i]);
       System.out.println("Adding " + gE);
       highscores.add(gE);
       System.out.println(" Scoreboard: " + highscores);
     }
-    /*
+
     System.out.println("Removing score at index " + 3);
     highscores.remove(3);
     System.out.println(highscores);
@@ -138,6 +203,5 @@ public class ScoreboardSLL {
     System.out.println("Removing score at index " + 0);
     highscores.remove(0);
     System.out.println(highscores);
-    */
   }
 }
